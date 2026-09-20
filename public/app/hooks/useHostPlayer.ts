@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { VideoQuality } from '../lib/encoding.ts';
 import { pickLibraryDirectory, readPlaylist, resolveFile } from '../lib/file-system.ts';
 import { toggleFullscreen as toggleElementFullscreen } from '../lib/fullscreen.ts';
-import { captureStreamFromVideo, waitForMedia } from '../lib/media.ts';
+import { waitForMedia } from '../lib/media.ts';
+import { acquireCapture, releaseCapture } from '../lib/video-capture.ts';
 import type { PlaybackState, Playlist } from '../types.ts';
 import { useElementRef } from './useElementRef.ts';
 
@@ -30,14 +32,14 @@ export interface HostPlayerApi {
   stepRate: (direction: number) => void;
   toggleFullscreen: () => Promise<void>;
   captureStream: () => MediaStream;
-  /** 片源真实分辨率，供发送端换算降采样倍数。 */
-  getSourceSize: () => { width: number; height: number };
+  releaseCaptureStream: () => void;
 }
 
 export function useHostPlayer(options: {
   onStateChange?: (state: PlaybackState) => void;
+  quality: VideoQuality;
 }): HostPlayerApi {
-  const { onStateChange } = options;
+  const { onStateChange, quality } = options;
 
   const {
     element: video,
@@ -259,16 +261,21 @@ export function useHostPlayer(options: {
 
   const toggleFullscreen = useCallback(() => toggleElementFullscreen(video), [video]);
 
-  const captureStream = useCallback(() => captureStreamFromVideo(video), [video]);
+  const captureStream = useCallback(() => acquireCapture(video, quality), [quality, video]);
 
-  const getSourceSize = useCallback(() => {
-    const element = videoElementRef.current;
-
-    return {
-      width: element?.videoWidth ?? 0,
-      height: element?.videoHeight ?? 0,
-    };
+  const releaseCaptureStream = useCallback(() => {
+    releaseCapture(videoElementRef.current);
   }, [videoElementRef]);
+
+  useEffect(() => {
+    if (!video) {
+      return;
+    }
+
+    const element = video;
+
+    return () => releaseCapture(element);
+  }, [video]);
 
   return {
     video,
@@ -290,6 +297,6 @@ export function useHostPlayer(options: {
     stepRate,
     toggleFullscreen,
     captureStream,
-    getSourceSize,
+    releaseCaptureStream,
   };
 }

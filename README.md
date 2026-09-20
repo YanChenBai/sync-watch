@@ -113,17 +113,26 @@ Chrome / Edge 弹出 Cast 设备选择器，Safari 弹出 AirPlay 列表；连�
 
 房主可在工具栏切换「高清 1080p / 均衡 720p / 省流量 480p」，切换后立即对所有观看者生效。
 
-发送端会显式设置码率上限、**分辨率上限**、`maxFramerate`、`degradationPreference`
-与 `contentHint`（视频 `motion`、音频 `music`）。
+发送端会显式设置码率上限、`maxFramerate`、`degradationPreference` 与
+`contentHint`（视频 `motion`、音频 `music`），避免 WebRTC 默认的保守参数把画面压得过糊。
 
-**分辨率上限是刚需**：WebRTC 默认不做缩放，如果按片源原始分辨率编码，
-4K60 片源会让浏览器直接编码 3840×2160，吃掉大量显存并可能把 GPU 进程打崩
-（Windows 上表现为 `STATUS_BREAKPOINT`）。所以：
+### 为什么采集要多过一层 canvas
 
-- 片源分辨率直接从播放器元素读取，换算成 `scaleResolutionDownBy`
-  （4K → 1080p 即 `2`），并且**只采样一次后缓存**，避免重算回 `1`。
-- 切换片源时会重新采样，不会沿用上一部的分辨率。
-- 工具栏下方会写清降采样前后尺寸，例如 `源 3840×2160 → 编码 1920×1080`。
+Chrome 用 `video.captureStream()` 采集 4K 片源时会打在 GPU 进程的 CHECK 上，
+整页崩溃并显示「错误代码：STATUS_BREAKPOINT」。只要调一次就崩，和有没有观看者、
+编码参数都无关（已用 CDP 实测过 4K60 与 5GB 文件）。
+
+所以 `public/app/lib/video-capture.ts` 不再做元素采集：
+
+1. 先把画面 `drawImage` 到目标分辨率的 canvas（4K 源 → 1920×1080）；
+2. 再 `canvas.captureStream()`，WebRTC 侧永远只看到 ≤1080p 的帧；
+3. 音频用 Web Audio 单独取。`createMediaElementSource` 会把元素的声音改道进音频图，
+   所以同时接回 `context.destination`，房主自己才听得到；实测 `element.volume`
+   依然线性作用于音量（1.0→0.088 / 0.5→0.044 / 0.2→0.018 / 0→0）。
+
+降采样只在 canvas 上做一次，发送端 `scaleResolutionDownBy` 固定为 `1`。
+片源本来就低于档位上限时，canvas 就是原始尺寸，不做任何缩放。
+切换片源或切换画质都会重新计算 canvas 尺寸。
 
 ## 环境变量
 

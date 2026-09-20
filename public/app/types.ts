@@ -34,8 +34,6 @@ export interface PeerState {
     audio?: RTCRtpSender;
   };
   remoteStream?: MediaStream;
-  /** 片源真实高度，缓存下来避免重复读取时把降采样倍数算回 1。 */
-  sourceHeight?: number;
 }
 
 /*

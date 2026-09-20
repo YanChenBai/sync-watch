@@ -45,22 +45,3 @@ export function formatTime(value: number): string {
 function pad(value: number): string {
   return String(value).padStart(2, '0');
 }
-
-/** 捕获正在播放的视频流，供 WebRTC 发送。 */
-export function captureStreamFromVideo(video: HTMLVideoElement | null): MediaStream {
-  if (!video) {
-    throw new Error('播放器尚未准备好');
-  }
-
-  if (typeof video.captureStream !== 'function') {
-    throw new Error('当前浏览器不支持 video.captureStream()，请使用桌面版 Chrome / Edge');
-  }
-
-  const stream = video.captureStream();
-
-  if (stream.getTracks().length === 0) {
-    throw new Error('没有捕获到音视频轨道，请先播放视频');
-  }
-
-  return stream;
-}

@@ -19,8 +19,8 @@ function toMessage(cause: unknown): string {
 /**
  * 停止旧的采集流。
  *
- * `captureStream()` 在不同浏览器上可能复用同一批 track，
- * 因此保留仍然存在于新流中的轨道，避免把新流一起停掉。
+ * 换片源时 canvas 采集流是同一个对象（音轨还来自共享的音频图），
+ * 所以只停那些真的不在新流里的轨道，避免把正在用的流一起停掉。
  */
 function stopStream(stream: MediaStream | null, keep?: MediaStream): void {
   const keptIds = new Set(keep?.getTracks().map(track => track.id) ?? []);
@@ -52,6 +52,7 @@ export function App() {
   const hostStreamRef = useRef<MediaStream | null>(null);
 
   const host = useHostPlayer({
+    quality,
     onStateChange: state => sessionRef.current?.broadcastState(state),
   });
 
@@ -171,7 +172,6 @@ export function App() {
         forceRelay,
         quality,
         getHostStream: () => hostStreamRef.current,
-        getSourceHeight: () => host.getSourceSize().height,
         onRemoteStream: () => {},
         onRemoteState: () => {},
         onStatus: setStatus,
@@ -199,7 +199,6 @@ export function App() {
         forceRelay,
         quality,
         getHostStream: () => null,
-        getSourceHeight: () => 0,
         onRemoteStream: setRemoteStream,
         onRemoteState: setRemoteState,
         onStatus: setStatus,
@@ -249,7 +248,7 @@ export function App() {
     sessionRef.current?.close();
     sessionRef.current = null;
 
-    stopStream(hostStreamRef.current);
+    host.releaseCaptureStream();
     hostStreamRef.current = null;
 
     setRemoteStream(null);

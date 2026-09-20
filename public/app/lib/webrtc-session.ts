@@ -8,12 +8,7 @@ import type {
   Role,
   SignalMessage,
 } from '../types.ts';
-import {
-  applyAudioEncoding,
-  applyVideoEncoding,
-  readTrackHeight,
-  type VideoQuality,
-} from './encoding.ts';
+import { applyAudioEncoding, applyVideoEncoding, type VideoQuality } from './encoding.ts';
 import { describeConnectionPath, getIceConfig } from './ice.ts';
 import { randomId } from './random-id.ts';
 
@@ -23,8 +18,6 @@ export interface WebRtcSessionOptions {
   forceRelay: boolean;
   quality: VideoQuality;
   getHostStream: () => MediaStream | null;
-  /** 片源分辨率由播放器直接给出，比 track.getSettings() 更可靠。 */
-  getSourceHeight: () => number;
   onRemoteStream: (stream: MediaStream) => void;
   onRemoteState: (state: PlaybackState) => void;
   onStatus: (status: string) => void;
@@ -99,8 +92,6 @@ export class WebRtcSession {
       await peer.senders.video?.replaceTrack(videoTrack);
       await peer.senders.audio?.replaceTrack(audioTrack);
 
-      // 换了片源，真实分辨率可能已经变了，重新采样一次
-      peer.sourceHeight = undefined;
       await this.applyHostEncoding(peer);
     }
   }
@@ -326,33 +317,11 @@ export class WebRtcSession {
     peer.pendingCandidates = [];
   }
 
-  /**
-   * 片源高度只采一次并缓存。
-   *
-   * 降采样之后 track.getSettings() 有可能回报缩放后的尺寸，
-   * 如果每次都重新读取，`scaleResolutionDownBy` 会被算回 1，
-   * 于是又变成直接编码 4K。
-   */
-  private readSourceHeight(peer: PeerState, sender: RTCRtpSender): number {
-    if (peer.sourceHeight) {
-      return peer.sourceHeight;
-    }
-
-    const fromElement = this.options.getSourceHeight();
-    const height = fromElement > 0 ? fromElement : readTrackHeight(sender);
-
-    if (height > 0) {
-      peer.sourceHeight = height;
-    }
-
-    return height;
-  }
-
   private async applyHostEncoding(peer: PeerState): Promise<void> {
     const video = peer.senders.video;
 
     if (video) {
-      await applyVideoEncoding(video, this.quality, this.readSourceHeight(peer, video));
+      await applyVideoEncoding(video, this.quality);
     }
 
     if (peer.senders.audio) {

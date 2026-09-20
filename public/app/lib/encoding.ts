@@ -66,21 +66,9 @@ export function resolveScaleDownBy(sourceHeight: number, maxHeight: number): num
   return sourceHeight / maxHeight;
 }
 
-/** 从发送端读取片源真实高度（captureStream 的 track 会带上）。 */
-export function readTrackHeight(sender: RTCRtpSender): number {
-  const track = sender.track;
-
-  if (!track) {
-    return 0;
-  }
-
-  return track.getSettings().height ?? 0;
-}
-
 export async function applyVideoEncoding(
   sender: RTCRtpSender,
   quality: VideoQuality,
-  sourceHeight: number,
 ): Promise<void> {
   const profile = VIDEO_QUALITY_PROFILES[quality];
   const track = sender.track;
@@ -95,14 +83,13 @@ export async function applyVideoEncoding(
     parameters.encodings = [{}];
   }
 
-  const scaleResolutionDownBy = resolveScaleDownBy(sourceHeight, profile.maxHeight);
-
   parameters.degradationPreference = profile.degradationPreference;
 
   for (const encoding of parameters.encodings) {
     encoding.maxBitrate = profile.maxBitrate;
     encoding.maxFramerate = profile.maxFramerate;
-    encoding.scaleResolutionDownBy = scaleResolutionDownBy;
+    // 降采样已经在 canvas 上做完了，这里不要再缩第二次
+    encoding.scaleResolutionDownBy = 1;
     encoding.networkPriority = 'high';
   }
 
