@@ -30,13 +30,21 @@ export interface HostPlayerApi {
   stepRate: (direction: number) => void;
   toggleFullscreen: () => Promise<void>;
   captureStream: () => MediaStream;
+  /** 片源真实分辨率，供发送端换算降采样倍数。 */
+  getSourceSize: () => { width: number; height: number };
 }
 
 export function useHostPlayer(options: {
   onStateChange?: (state: PlaybackState) => void;
 }): HostPlayerApi {
   const { onStateChange } = options;
-  const { element: video, ref: videoRef } = useElementRef<HTMLVideoElement>();
+
+  const {
+    element: video,
+    elementRef: videoElementRef,
+    ref: videoRef,
+  } = useElementRef<HTMLVideoElement>();
+
   const [playlist, setPlaylist] = useState<Playlist | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [paused, setPaused] = useState(true);
@@ -253,6 +261,15 @@ export function useHostPlayer(options: {
 
   const captureStream = useCallback(() => captureStreamFromVideo(video), [video]);
 
+  const getSourceSize = useCallback(() => {
+    const element = videoElementRef.current;
+
+    return {
+      width: element?.videoWidth ?? 0,
+      height: element?.videoHeight ?? 0,
+    };
+  }, [videoElementRef]);
+
   return {
     video,
     videoRef,
@@ -273,5 +290,6 @@ export function useHostPlayer(options: {
     stepRate,
     toggleFullscreen,
     captureStream,
+    getSourceSize,
   };
 }

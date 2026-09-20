@@ -1,7 +1,7 @@
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts.ts';
 import { useMediaVolume } from '../hooks/useMediaVolume.ts';
 import { useRemotePlayback } from '../hooks/useRemotePlayback.ts';
-import { useVideoAspect } from '../hooks/useVideoAspect.ts';
+import { useVideoSize } from '../hooks/useVideoSize.ts';
 import { isFullscreenSupported, toggleFullscreen } from '../lib/fullscreen.ts';
 import { formatTime } from '../lib/media.ts';
 import type { PlaybackState } from '../types.ts';
@@ -74,7 +74,7 @@ export function ViewerPlayer({
   const volume = useMediaVolume(video);
   const cast = useRemotePlayback(video);
   const fullscreenSupported = isFullscreenSupported();
-  const aspect = useVideoAspect(video);
+  const size = useVideoSize(video);
 
   function requestFullscreen(): void {
     void toggleFullscreen(video);
@@ -98,7 +98,7 @@ export function ViewerPlayer({
 
       <ViewerMeta state={state} />
 
-      <div className="stage" style={{ aspectRatio: aspect }}>
+      <div className="stage" style={{ aspectRatio: size.aspect }}>
         <video ref={videoRef} className="stage-video" controls playsInline />
 
         {blocked && (

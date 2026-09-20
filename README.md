@@ -111,10 +111,19 @@ Chrome / Edge 弹出 Cast 设备选择器，Safari 弹出 AirPlay 列表；连�
 
 ## 画质
 
-房主可在工具栏切换「原始画质 / 均衡 / 省流量」，切换后立即对所有观看者生效。
-发送端会显式设置码率上限、`degradationPreference: maintain-resolution`、
-`maxFramerate` 与 `contentHint`（视频 `motion`、音频 `music`），
-避免 WebRTC 默认的保守参数把画面压得过糊。
+房主可在工具栏切换「高清 1080p / 均衡 720p / 省流量 480p」，切换后立即对所有观看者生效。
+
+发送端会显式设置码率上限、**分辨率上限**、`maxFramerate`、`degradationPreference`
+与 `contentHint`（视频 `motion`、音频 `music`）。
+
+**分辨率上限是刚需**：WebRTC 默认不做缩放，如果按片源原始分辨率编码，
+4K60 片源会让浏览器直接编码 3840×2160，吃掉大量显存并可能把 GPU 进程打崩
+（Windows 上表现为 `STATUS_BREAKPOINT`）。所以：
+
+- 片源分辨率直接从播放器元素读取，换算成 `scaleResolutionDownBy`
+  （4K → 1080p 即 `2`），并且**只采样一次后缓存**，避免重算回 `1`。
+- 切换片源时会重新采样，不会沿用上一部的分辨率。
+- 工具栏下方会写清降采样前后尺寸，例如 `源 3840×2160 → 编码 1920×1080`。
 
 ## 环境变量
 

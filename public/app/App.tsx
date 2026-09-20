@@ -40,7 +40,7 @@ export function App() {
   const [status, setStatus] = useState('未连接');
   const [path, setPath] = useState('unknown');
   const [forceRelay, setForceRelay] = useState(false);
-  const [quality, setQuality] = useState<VideoQuality>('source');
+  const [quality, setQuality] = useState<VideoQuality>('high');
   const [remoteState, setRemoteState] = useState<PlaybackState | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [blocked, setBlocked] = useState(false);
@@ -171,6 +171,7 @@ export function App() {
         forceRelay,
         quality,
         getHostStream: () => hostStreamRef.current,
+        getSourceHeight: () => host.getSourceSize().height,
         onRemoteStream: () => {},
         onRemoteState: () => {},
         onStatus: setStatus,
@@ -198,6 +199,7 @@ export function App() {
         forceRelay,
         quality,
         getHostStream: () => null,
+        getSourceHeight: () => 0,
         onRemoteStream: setRemoteStream,
         onRemoteState: setRemoteState,
         onStatus: setStatus,

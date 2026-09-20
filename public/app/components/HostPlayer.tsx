@@ -3,8 +3,13 @@ import { RATE_STEPS } from '../hooks/useHostPlayer.ts';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts.ts';
 import { useMediaVolume } from '../hooks/useMediaVolume.ts';
 import { useRemotePlayback } from '../hooks/useRemotePlayback.ts';
-import { useVideoAspect } from '../hooks/useVideoAspect.ts';
-import { VIDEO_QUALITY_ORDER, VIDEO_QUALITY_PROFILES, type VideoQuality } from '../lib/encoding.ts';
+import { useVideoSize } from '../hooks/useVideoSize.ts';
+import {
+  describeEncodingHint,
+  VIDEO_QUALITY_ORDER,
+  VIDEO_QUALITY_PROFILES,
+  type VideoQuality,
+} from '../lib/encoding.ts';
 import { isFullscreenSupported } from '../lib/fullscreen.ts';
 import { formatTime } from '../lib/media.ts';
 import { CastButton, CastNotice } from './CastControls.tsx';
@@ -21,7 +26,7 @@ export function HostPlayer({ player, quality, onQualityChange, onSelectItem }: H
   const volume = useMediaVolume(player.video);
   const cast = useRemotePlayback(player.video);
   const fullscreenSupported = isFullscreenSupported();
-  const aspect = useVideoAspect(player.video);
+  const size = useVideoSize(player.video);
   const duration = player.duration || 0;
 
   useKeyboardShortcuts([
@@ -63,7 +68,7 @@ export function HostPlayer({ player, quality, onQualityChange, onSelectItem }: H
         </select>
       </label>
 
-      <div className="stage" style={{ aspectRatio: aspect }}>
+      <div className="stage" style={{ aspectRatio: size.aspect }}>
         <video
           ref={player.videoRef}
           className="stage-video"
@@ -193,7 +198,7 @@ export function HostPlayer({ player, quality, onQualityChange, onSelectItem }: H
 
       <CastNotice playback={cast} />
 
-      <p className="hint">画质：{VIDEO_QUALITY_PROFILES[quality].hint}，切换后立即生效。</p>
+      <p className="hint">{describeEncodingHint(quality, size.width, size.height)}</p>
     </section>
   );
 }
